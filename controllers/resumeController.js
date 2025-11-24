@@ -96,9 +96,11 @@ export const updateResume = async (req, res) => {
         transformation: {
           pre:
             "w-300,h-300,fo-face,z-0.75" +
-            (removeBackground ? ",e-bgremove" : ""), 
+            (removeBackground ? ",e-bgremove" : ""),
         },
       });
+
+      resumeDataCopy.personal_info.image = response.url;
     }
 
     let resumeDataCopy = JSON.parse(resumeData);
