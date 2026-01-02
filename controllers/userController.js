@@ -46,6 +46,30 @@ export const registerUser = async (req, res) => {
   }
 };
 
+// DEV-ONLY: reset user password without login
+// POST: /api/users/dev-reset-password
+export const devResetPassword = async (req, res) => {
+  try {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({ message: "Not allowed in production" });
+    }
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "Email and newPassword required" });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+};
+
 // controller for user login
 // POST: /api/users/login
 

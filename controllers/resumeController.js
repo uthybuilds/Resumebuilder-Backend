@@ -87,6 +87,14 @@ export const updateResume = async (req, res) => {
     const { resumeId, resumeData, removeBackground } = req.body;
     const image = req.file;
 
+    let resumeDataCopy;
+    try {
+      resumeDataCopy =
+        typeof resumeData === "string" ? JSON.parse(resumeData) : resumeData;
+    } catch (e) {
+      resumeDataCopy = resumeData;
+    }
+
     if (image) {
       const imageBufferData = fs.createReadStream(image.path);
       const response = await imagekit.files.upload({
@@ -100,14 +108,14 @@ export const updateResume = async (req, res) => {
         },
       });
 
-      resumeDataCopy.personal_info.image = response.url;
+      if (resumeDataCopy && resumeDataCopy.personal_info) {
+        resumeDataCopy.personal_info.image = response.url;
+      }
     }
 
-    let resumeDataCopy = JSON.parse(resumeData);
-
-    const resume = await Resume.findByIdAndUpdate(
+    const resume = await Resume.findOneAndUpdate(
       { userId, _id: resumeId },
-      resumeDataCopy,
+      { $set: resumeDataCopy },
       { new: true }
     );
 

@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(cors());
 
 app.get("/", (req, res) => res.send("server is live..."));
-app.use("api/users", userRouter);
+app.use("/api/users", userRouter);
 app.use("/api/resumes", resumeRouter);
 app.use("/api/ai", aiRouter);
 

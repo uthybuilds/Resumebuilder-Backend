@@ -12,7 +12,7 @@ const connectDB = async () => {
     if (!mongodbURI) {
       throw new Error("MONGODB_URI enviroment variable not set");
     }
-    if (!mongodbURI.endsWith("/")) {
+    if (mongodbURI.endsWith("/")) {
       mongodbURI = mongodbURI.slice(0, -1);
     }
 
