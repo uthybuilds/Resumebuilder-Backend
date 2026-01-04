@@ -1,26 +1,35 @@
 import nodemailer from "nodemailer";
-import { Resend } from "resend";
 
 const sendEmail = async (options) => {
   const fromEmail = `${process.env.FROM_NAME || "Resume Builder"} <${
     process.env.FROM_EMAIL || process.env.EMAIL_USER || "onboarding@resend.dev"
   }>`;
 
-  // 1) Try RESEND (HTTP API, no SMTP ports)
+  // 1) Try RESEND via direct HTTP (avoids library/version issues)
   if (process.env.RESEND_API_KEY) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
     try {
-      await resend.emails.send({
-        from: fromEmail,
-        to: options.email,
-        subject: options.subject,
-        html: options.html,
-        text: options.message,
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: options.email,
+          subject: options.subject,
+          html: options.html,
+          text: options.message,
+        }),
       });
-      return;
+      if (resp.ok) {
+        return;
+      }
+      const errText = await resp.text().catch(() => "");
+      console.error("Resend HTTP failed:", resp.status, errText);
+      // If 401/403 or other errors, fall through to SMTP fallback
     } catch (err) {
-      // fall through to SMTP
-      console.error("Resend failed, falling back to SMTP:", err?.message || err);
+      console.error("Resend HTTP error:", err?.message || err);
     }
   }
 
@@ -38,8 +47,8 @@ const sendEmail = async (options) => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
+    connectionTimeout: 7000,
+    greetingTimeout: 7000,
   });
 
   const message = {
