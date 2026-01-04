@@ -3,7 +3,7 @@ import { Resend } from "resend";
 
 const sendEmail = async (options) => {
   const fromEmail = `${process.env.FROM_NAME || "Resume Builder"} <${
-    process.env.FROM_EMAIL || process.env.EMAIL_USER || "onboarding@resend.com"
+    process.env.FROM_EMAIL || process.env.EMAIL_USER || "onboarding@resend.dev"
   }>`;
 
   // 1) Try RESEND (HTTP API, no SMTP ports)

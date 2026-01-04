@@ -15,6 +15,13 @@ await connectDB();
 app.use(express.json());
 app.use(cors());
 
+if (!process.env.RESEND_API_KEY) {
+  console.log("RESEND_API_KEY not set");
+}
+if (!process.env.FROM_EMAIL) {
+  console.log("FROM_EMAIL not set");
+}
+
 app.get("/", (req, res) => res.send("server is live..."));
 app.use("/api/users", userRouter);
 app.use("/api/resumes", resumeRouter);
