@@ -89,13 +89,15 @@ export const registerUser = async (req, res) => {
       });
       return res.status(201).json({
         message:
-          "User created. Verification email sent. Please check your inbox.",
+          "User created. Verification email sent.",
+        verifyUrl,
       });
     } catch (error) {
-      // If email fails, delete the user so they can try again
-      await User.findByIdAndDelete(newUser._id);
-      return res.status(500).json({
-        message: "Email could not be sent. Please try again later.",
+      // Email failed, keep the account and provide direct verification URL fallback
+      return res.status(201).json({
+        message:
+          "Verification email could not be sent. Redirecting you to verify now.",
+        verifyUrl,
       });
     }
   } catch (error) {
