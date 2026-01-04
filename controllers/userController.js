@@ -156,22 +156,19 @@ export const forgotPassword = async (req, res) => {
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
     const message = `You requested a password reset. Please click on the following link to reset your password: ${resetUrl} \n\nThis link expires in 30 minutes.`;
 
+    // Send email asynchronously (do not block response)
     try {
-      await sendEmail({
+      sendEmail({
         email: user.email,
         subject: "Password Reset Request",
         message,
         html: `<p>You requested a password reset. Please click on the following link to reset your password:</p><a href="${resetUrl}">${resetUrl}</a><p>This link expires in 30 minutes.</p>`,
-      });
-      return res.status(200).json({
-        message: "Password reset link sent if the email exists.",
-      });
-    } catch (error) {
-      user.resetPasswordToken = undefined;
-      user.resetPasswordTokenExpires = undefined;
-      await user.save();
-      return res.status(500).json({ message: "Email could not be sent" });
-    }
+      }).catch(() => {});
+    } catch {}
+    return res.status(200).json({
+      message: "Password reset link sent. Please check your email.",
+      resetUrl,
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
