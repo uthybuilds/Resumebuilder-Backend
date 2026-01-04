@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import Resend from "resend";
+import { Resend } from "resend";
 
 const sendEmail = async (options) => {
   const fromEmail = `${process.env.FROM_NAME || "Resume Builder"} <${
