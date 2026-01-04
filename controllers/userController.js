@@ -40,20 +40,18 @@ export const registerUser = async (req, res) => {
         const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
         const message = `Please click on the following link to verify your email address: ${verifyUrl} \n\nThis link expires in 30 minutes.`;
         try {
-          await sendEmail({
+          // fire-and-forget email sending to avoid blocking response
+          sendEmail({
             email: user.email,
             subject: "Verify your email address",
             message,
             html: `<p>Please click on the following link to verify your email address:</p><a href="${verifyUrl}">${verifyUrl}</a><p>This link expires in 30 minutes.</p>`,
-          });
-          return res.status(200).json({
-            message: "Account exists but not verified. Verification email resent.",
-          });
-        } catch (error) {
-          return res.status(500).json({
-            message: "Email could not be sent. Please try again later.",
-          });
-        }
+          }).catch(() => {});
+        } catch {}
+        return res.status(200).json({
+          message: "Account exists but not verified. Redirecting to verification...",
+          verifyUrl,
+        });
       }
       return res.status(400).json({ message: "User already exists" });
     }
@@ -81,23 +79,18 @@ export const registerUser = async (req, res) => {
     const message = `Please click on the following link to verify your email address: ${verifyUrl} \n\nThis link expires in 30 minutes.`;
 
     try {
-      await sendEmail({
+      // fire-and-forget email sending to avoid blocking response
+      sendEmail({
         email: newUser.email,
         subject: "Verify your email address",
         message,
         html: `<p>Please click on the following link to verify your email address:</p><a href="${verifyUrl}">${verifyUrl}</a><p>This link expires in 30 minutes.</p>`,
-      });
-      return res.status(201).json({
-        message: "Account created. Redirecting to verification...",
-        verifyUrl,
-      });
-    } catch (error) {
-      // Email failed, keep the account and provide direct verification URL fallback
-      return res.status(201).json({
-        message: "Account created. Redirecting to verification...",
-        verifyUrl,
-      });
-    }
+      }).catch(() => {});
+    } catch {}
+    return res.status(201).json({
+      message: "Account created. Redirecting to verification...",
+      verifyUrl,
+    });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
