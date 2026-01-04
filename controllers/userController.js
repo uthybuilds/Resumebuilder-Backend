@@ -24,8 +24,37 @@ export const registerUser = async (req, res) => {
     }
 
     // check if user already exists
-    const user = await User.findOne({ email });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
     if (user) {
+      if (!user.isVerified) {
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+        const hashedVerificationToken = crypto
+          .createHash("sha256")
+          .update(verificationToken)
+          .digest("hex");
+        user.verificationToken = hashedVerificationToken;
+        user.verificationTokenExpires = Date.now() + 30 * 60 * 1000;
+        await user.save();
+
+        const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+        const message = `Please click on the following link to verify your email address: ${verifyUrl} \n\nThis link expires in 30 minutes.`;
+        try {
+          await sendEmail({
+            email: user.email,
+            subject: "Verify your email address",
+            message,
+            html: `<p>Please click on the following link to verify your email address:</p><a href="${verifyUrl}">${verifyUrl}</a><p>This link expires in 30 minutes.</p>`,
+          });
+          return res.status(200).json({
+            message: "Account exists but not verified. Verification email resent.",
+          });
+        } catch (error) {
+          return res.status(500).json({
+            message: "Email could not be sent. Please try again later.",
+          });
+        }
+      }
       return res.status(400).json({ message: "User already exists" });
     }
 
@@ -40,7 +69,7 @@ export const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       verificationToken: hashedVerificationToken,
       verificationTokenExpires: Date.now() + 30 * 60 * 1000, // 30 minutes
@@ -112,7 +141,7 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Please provide an email" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() });
     if (!user) {
       // Do not reveal if user exists
       return res.status(200).json({
