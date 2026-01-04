@@ -88,15 +88,13 @@ export const registerUser = async (req, res) => {
         html: `<p>Please click on the following link to verify your email address:</p><a href="${verifyUrl}">${verifyUrl}</a><p>This link expires in 30 minutes.</p>`,
       });
       return res.status(201).json({
-        message:
-          "User created. Verification email sent.",
+        message: "Account created. Redirecting to verification...",
         verifyUrl,
       });
     } catch (error) {
       // Email failed, keep the account and provide direct verification URL fallback
       return res.status(201).json({
-        message:
-          "Verification email could not be sent. Redirecting you to verify now.",
+        message: "Account created. Redirecting to verification...",
         verifyUrl,
       });
     }
