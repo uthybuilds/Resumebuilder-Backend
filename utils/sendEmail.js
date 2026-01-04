@@ -13,10 +13,11 @@ const sendEmail = async (options) => {
         headers: {
           Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify({
           from: fromEmail,
-          to: options.email,
+          to: Array.isArray(options.email) ? options.email : [options.email],
           subject: options.subject,
           html: options.html,
           text: options.message,
@@ -25,7 +26,10 @@ const sendEmail = async (options) => {
       if (resp.ok) {
         return;
       }
-      const errText = await resp.text().catch(() => "");
+      let errText = "";
+      try {
+        errText = await resp.text();
+      } catch {}
       console.error("Resend HTTP failed:", resp.status, errText);
       // If 401/403 or other errors, fall through to SMTP fallback
     } catch (err) {
