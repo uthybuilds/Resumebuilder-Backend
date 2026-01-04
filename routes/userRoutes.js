@@ -1,6 +1,5 @@
 import express from "express";
 import {
-  getUserById,
   getUserResumes,
   loginUser,
   registerUser,
@@ -8,6 +7,7 @@ import {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  getUserById,
 } from "../controllers/userController.js";
 import protect from "../middlewares/authMiddleware.js";
 
