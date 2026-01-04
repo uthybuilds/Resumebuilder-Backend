@@ -7,18 +7,18 @@ const connectDB = async () => {
     });
 
     let mongodbURI = process.env.MONGODB_URI;
-    const projectName = "resume-builder";
+    const defaultDbName = "resume-builder";
 
     if (!mongodbURI) {
       throw new Error("MONGODB_URI enviroment variable not set");
     }
-    if (mongodbURI.endsWith("/")) {
-      mongodbURI = mongodbURI.slice(0, -1);
-    }
+    const hasDbPath = /mongodb(\+srv)?:\/\/[^/]+\/[^?]+/.test(mongodbURI);
+    const dbName = process.env.MONGODB_DB_NAME || defaultDbName;
 
-    await mongoose.connect(`${mongodbURI}/${projectName}`);
+    await mongoose.connect(mongodbURI, hasDbPath ? {} : { dbName });
   } catch (error) {
     console.log("Error connecting to MongoDB:", error);
+    throw error;
   }
 };
 

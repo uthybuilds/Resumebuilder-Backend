@@ -1,8 +1,7 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import "dotenv/config";
 
-const ai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const genAI = new GoogleGenerativeAI(process.env.OPENAI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-export default ai;
+export default model;
