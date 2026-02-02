@@ -27,41 +27,8 @@ export const registerUser = async (req, res) => {
     const normalizedEmail = String(email).trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail });
     if (user) {
-      if (!user.isVerified) {
-        const verificationToken = crypto.randomBytes(32).toString("hex");
-        const hashedVerificationToken = crypto
-          .createHash("sha256")
-          .update(verificationToken)
-          .digest("hex");
-        user.verificationToken = hashedVerificationToken;
-        user.verificationTokenExpires = Date.now() + 30 * 60 * 1000;
-        await user.save();
-
-        const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
-        const message = `Please click on the following link to verify your email address: ${verifyUrl} \n\nThis link expires in 30 minutes.`;
-        try {
-          // fire-and-forget email sending to avoid blocking response
-          sendEmail({
-            email: user.email,
-            subject: "Verify your email address",
-            message,
-            html: `<p>Please click on the following link to verify your email address:</p><a href="${verifyUrl}">${verifyUrl}</a><p>This link expires in 30 minutes.</p>`,
-          }).catch(() => {});
-        } catch {}
-        return res.status(200).json({
-          message: "Account exists but not verified. Redirecting to verification...",
-          verifyUrl,
-        });
-      }
       return res.status(400).json({ message: "User already exists" });
     }
-
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    const hashedVerificationToken = crypto
-      .createHash("sha256")
-      .update(verificationToken)
-      .digest("hex");
 
     // create new user
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -69,27 +36,19 @@ export const registerUser = async (req, res) => {
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      verificationToken: hashedVerificationToken,
-      verificationTokenExpires: Date.now() + 30 * 60 * 1000, // 30 minutes
-      isVerified: false,
+      isVerified: true, // Auto-verify
     });
 
-    // Send verification email
-    const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
-    const message = `Please click on the following link to verify your email address: ${verifyUrl} \n\nThis link expires in 30 minutes.`;
+    const token = generateToken(newUser._id);
 
-    try {
-      // fire-and-forget email sending to avoid blocking response
-      sendEmail({
-        email: newUser.email,
-        subject: "Verify your email address",
-        message,
-        html: `<p>Please click on the following link to verify your email address:</p><a href="${verifyUrl}">${verifyUrl}</a><p>This link expires in 30 minutes.</p>`,
-      }).catch(() => {});
-    } catch {}
     return res.status(201).json({
-      message: "Account created. Redirecting to verification...",
-      verifyUrl,
+      message: "Account created successfully",
+      token,
+      user: {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+      },
     });
   } catch (error) {
     return res.status(400).json({ message: error.message });
@@ -291,5 +250,26 @@ export const getUserResumes = async (req, res) => {
     return res.status(200).json({ resumes });
   } catch (error) {
     return res.status(400).json({ message: error.message });
+  }
+};
+
+// DELETE: /api/users/delete
+export const deleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+      // Delete all resumes associated with the user
+      await Resume.deleteMany({ user: user._id });
+      
+      // Delete the user
+      await user.deleteOne();
+      
+      res.json({ message: "User account and all associated data deleted successfully" });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

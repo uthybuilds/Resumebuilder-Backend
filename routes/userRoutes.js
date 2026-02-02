@@ -8,6 +8,7 @@ import {
   forgotPassword,
   resetPassword,
   getUserById,
+  deleteUser,
 } from "../controllers/userController.js";
 import protect from "../middlewares/authMiddleware.js";
 
@@ -21,5 +22,6 @@ userRouter.post("/reset-password", resetPassword);
 userRouter.post("/dev-reset-password", devResetPassword);
 userRouter.get("/data", protect, getUserById);
 userRouter.get("/resumes", protect, getUserResumes);
+userRouter.delete("/delete", protect, deleteUser);
 
 export default userRouter;
