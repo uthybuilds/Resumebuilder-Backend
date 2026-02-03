@@ -32,23 +32,44 @@ export const registerUser = async (req, res) => {
 
     // create new user
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const hashedVerificationToken = crypto
+      .createHash("sha256")
+      .update(verificationToken)
+      .digest("hex");
+
     const newUser = await User.create({
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      isVerified: true, // Auto-verify
+      isVerified: false,
+      verificationToken: hashedVerificationToken,
+      verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
 
-    const token = generateToken(newUser._id);
+    // Send verification email
+    const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+    const message = `Please verify your email by clicking on the following link: ${verifyUrl}`;
+
+    try {
+      await sendEmail({
+        email: newUser.email,
+        subject: "Verify your email",
+        message,
+        html: `<p>Please verify your email by clicking on the following link:</p><a href="${verifyUrl}">${verifyUrl}</a>`,
+      });
+    } catch (error) {
+      console.error("Email send failed:", error);
+      // We still create the user but they might need to resend verification
+    }
 
     return res.status(201).json({
-      message: "Account created successfully",
-      token,
-      user: {
-        _id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-      },
+      message:
+        "Account created! Please check your email to verify your account.",
+      verifyUrl, // Optional: returned for dev convenience if needed, but mainly relied on email
+      token: verificationToken, // Also send token directly in case URL construction fails
     });
   } catch (error) {
     return res.status(400).json({ message: error.message });
@@ -93,7 +114,9 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Please provide an email" });
     }
 
-    const user = await User.findOne({ email: String(email).trim().toLowerCase() });
+    const user = await User.findOne({
+      email: String(email).trim().toLowerCase(),
+    });
     if (!user) {
       // Do not reveal if user exists
       return res.status(200).json({
@@ -138,7 +161,9 @@ export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
-      return res.status(400).json({ message: "Token and new password required" });
+      return res
+        .status(400)
+        .json({ message: "Token and new password required" });
     }
 
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -152,18 +177,17 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
-  user.password = await bcrypt.hash(newPassword, 10);
-  user.isVerified = true;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordTokenExpires = undefined;
-  await user.save();
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.isVerified = true;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordTokenExpires = undefined;
+    await user.save();
 
-  return res.status(200).json({ message: "Password reset successful" });
+    return res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
-
 
 // DEV-ONLY: reset user password without login
 // POST: /api/users/dev-reset-password
@@ -174,7 +198,9 @@ export const devResetPassword = async (req, res) => {
     }
     const { email, newPassword } = req.body;
     if (!email || !newPassword) {
-      return res.status(400).json({ message: "Email and newPassword required" });
+      return res
+        .status(400)
+        .json({ message: "Email and newPassword required" });
     }
     const user = await User.findOne({ email });
     if (!user) {
@@ -257,11 +283,13 @@ export const deleteUser = async (req, res) => {
     if (user) {
       // Delete all resumes associated with the user
       await Resume.deleteMany({ user: user._id });
-      
+
       // Delete the user
       await user.deleteOne();
-      
-      res.json({ message: "User account and all associated data deleted successfully" });
+
+      res.json({
+        message: "User account and all associated data deleted successfully",
+      });
     } else {
       res.status(404).json({ message: "User not found" });
     }
